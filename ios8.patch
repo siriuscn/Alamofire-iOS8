@@ -1,0 +1,205 @@
+diff --git a/Alamofire.xcodeproj/project.pbxproj b/Alamofire.xcodeproj/project.pbxproj
+index 3c90c23..5d627a3 100644
+--- a/Alamofire.xcodeproj/project.pbxproj
++++ b/Alamofire.xcodeproj/project.pbxproj
+@@ -1543,7 +1543,7 @@
+ 				GCC_WARN_UNINITIALIZED_AUTOS = YES_AGGRESSIVE;
+ 				GCC_WARN_UNUSED_FUNCTION = YES;
+ 				GCC_WARN_UNUSED_VARIABLE = YES;
+-				IPHONEOS_DEPLOYMENT_TARGET = 9.0;
++				IPHONEOS_DEPLOYMENT_TARGET = 8.0;
+ 				MACOSX_DEPLOYMENT_TARGET = 10.11;
+ 				MTL_ENABLE_DEBUG_INFO = YES;
+ 				ONLY_ACTIVE_ARCH = YES;
+@@ -1592,7 +1592,7 @@
+ 				GCC_WARN_UNINITIALIZED_AUTOS = YES_AGGRESSIVE;
+ 				GCC_WARN_UNUSED_FUNCTION = YES;
+ 				GCC_WARN_UNUSED_VARIABLE = YES;
+-				IPHONEOS_DEPLOYMENT_TARGET = 9.0;
++				IPHONEOS_DEPLOYMENT_TARGET = 8.0;
+ 				MACOSX_DEPLOYMENT_TARGET = 10.11;
+ 				MTL_ENABLE_DEBUG_INFO = NO;
+ 				SDKROOT = iphoneos;
+diff --git a/Source/Alamofire.swift b/Source/Alamofire.swift
+index 7566587..b020725 100644
+--- a/Source/Alamofire.swift
++++ b/Source/Alamofire.swift
+@@ -434,6 +434,7 @@ public func upload(
+ /// - parameter port:     The port of the server to connect to.
+ ///
+ /// - returns: The created `StreamRequest`.
++@available(iOS 9.0, *)
+ @discardableResult
+ public func stream(withHostName hostName: String, port: Int) -> StreamRequest {
+     return SessionManager.default.stream(withHostName: hostName, port: port)
+@@ -448,6 +449,7 @@ public func stream(withHostName hostName: String, port: Int) -> StreamRequest {
+ /// - parameter netService: The net service used to identify the endpoint.
+ ///
+ /// - returns: The created `StreamRequest`.
++@available(iOS 9.0, *)
+ @discardableResult
+ public func stream(with netService: NetService) -> StreamRequest {
+     return SessionManager.default.stream(with: netService)
+diff --git a/Source/Request.swift b/Source/Request.swift
+index 85eb869..505f938 100644
+--- a/Source/Request.swift
++++ b/Source/Request.swift
+@@ -471,7 +471,7 @@ open class DownloadRequest: Request {
+         NotificationCenter.default.post(
+             name: Notification.Name.Task.DidCancel,
+             object: self,
+-            userInfo: [Notification.Key.Task: task]
++            userInfo: [Notification.Key.Task: task as Any]
+         )
+     }
+ 
+@@ -577,7 +577,8 @@ open class UploadRequest: DataRequest {
+ #if !os(watchOS)
+ 
+ /// Specific type of `Request` that manages an underlying `URLSessionStreamTask`.
+-open class StreamRequest: Request {
++@available(iOS 9.0, *)
++    open class StreamRequest: Request {
+     enum Streamable: TaskConvertible {
+         case stream(hostName: String, port: Int)
+         case netService(NetService)
+diff --git a/Source/SessionDelegate.swift b/Source/SessionDelegate.swift
+index 4549731..924a1f9 100644
+--- a/Source/SessionDelegate.swift
++++ b/Source/SessionDelegate.swift
+@@ -24,6 +24,9 @@
+ 
+ import Foundation
+ 
++@available(iOS, introduced: 8.0, obsoleted: 9.0)
++public typealias URLSessionStreamTask = URLSessionTask
++
+ /// Responsible for handling all delegate callbacks for the underlying session.
+ open class SessionDelegate: NSObject {
+ 
+@@ -165,20 +168,22 @@ open class SessionDelegate: NSObject {
+             }
+         #endif
+ 
+-        #if !os(watchOS)
+-            switch selector {
+-            case #selector(URLSessionStreamDelegate.urlSession(_:readClosedFor:)):
+-                return streamTaskReadClosed != nil
+-            case #selector(URLSessionStreamDelegate.urlSession(_:writeClosedFor:)):
+-                return streamTaskWriteClosed != nil
+-            case #selector(URLSessionStreamDelegate.urlSession(_:betterRouteDiscoveredFor:)):
+-                return streamTaskBetterRouteDiscovered != nil
+-            case #selector(URLSessionStreamDelegate.urlSession(_:streamTask:didBecome:outputStream:)):
+-                return streamTaskDidBecomeInputAndOutputStreams != nil
+-            default:
+-                break
+-            }
+-        #endif
++        if #available(iOS 9.0, *) {
++            #if !os(watchOS)
++                switch selector {
++                case #selector(URLSessionStreamDelegate.urlSession(_:readClosedFor:)):
++                    return streamTaskReadClosed != nil
++                case #selector(URLSessionStreamDelegate.urlSession(_:writeClosedFor:)):
++                    return streamTaskWriteClosed != nil
++                case #selector(URLSessionStreamDelegate.urlSession(_:betterRouteDiscoveredFor:)):
++                    return streamTaskBetterRouteDiscovered != nil
++                case #selector(URLSessionStreamDelegate.urlSession(_:streamTask:didBecome:outputStream:)):
++                    return streamTaskDidBecomeInputAndOutputStreams != nil
++                default:
++                    break
++                }
++            #endif
++        }
+ 
+         switch selector {
+         case #selector(URLSessionDelegate.urlSession(_:didBecomeInvalidWithError:)):
+@@ -195,6 +200,10 @@ open class SessionDelegate: NSObject {
+     }
+ }
+ 
++extension SessionDelegate {
++
++}
++
+ // MARK: - URLSessionDelegate
+ 
+ extension SessionDelegate: URLSessionDelegate {
+@@ -637,12 +646,13 @@ extension SessionDelegate: URLSessionDownloadDelegate {
+ 
+ #if !os(watchOS)
+ 
++@available(iOS 9.0, *)
+ extension SessionDelegate: URLSessionStreamDelegate {
+     /// Tells the delegate that the read side of the connection has been closed.
+     ///
+     /// - parameter session:    The session.
+     /// - parameter streamTask: The stream task.
+-    open func urlSession(_ session: URLSession, readClosedFor streamTask: URLSessionStreamTask) {
++    @nonobjc open func urlSession(_ session: URLSession, readClosedFor streamTask: URLSessionStreamTask) {
+         streamTaskReadClosed?(session, streamTask)
+     }
+ 
+@@ -650,7 +660,7 @@ extension SessionDelegate: URLSessionStreamDelegate {
+     ///
+     /// - parameter session:    The session.
+     /// - parameter streamTask: The stream task.
+-    open func urlSession(_ session: URLSession, writeClosedFor streamTask: URLSessionStreamTask) {
++    @nonobjc open func urlSession(_ session: URLSession, writeClosedFor streamTask: URLSessionStreamTask) {
+         streamTaskWriteClosed?(session, streamTask)
+     }
+ 
+@@ -658,7 +668,7 @@ extension SessionDelegate: URLSessionStreamDelegate {
+     ///
+     /// - parameter session:    The session.
+     /// - parameter streamTask: The stream task.
+-    open func urlSession(_ session: URLSession, betterRouteDiscoveredFor streamTask: URLSessionStreamTask) {
++    @nonobjc open func urlSession(_ session: URLSession, betterRouteDiscoveredFor streamTask: URLSessionStreamTask) {
+         streamTaskBetterRouteDiscovered?(session, streamTask)
+     }
+ 
+@@ -668,7 +678,7 @@ extension SessionDelegate: URLSessionStreamDelegate {
+     /// - parameter streamTask:   The stream task.
+     /// - parameter inputStream:  The new input stream.
+     /// - parameter outputStream: The new output stream.
+-    open func urlSession(
++    @nonobjc open func urlSession(
+         _ session: URLSession,
+         streamTask: URLSessionStreamTask,
+         didBecome inputStream: InputStream,
+diff --git a/Source/SessionManager.swift b/Source/SessionManager.swift
+index 1363125..c7e0e88 100644
+--- a/Source/SessionManager.swift
++++ b/Source/SessionManager.swift
+@@ -708,6 +708,7 @@ open class SessionManager {
+     /// - parameter port:     The port of the server to connect to.
+     ///
+     /// - returns: The created `StreamRequest`.
++    @available(iOS 9.0, *)
+     @discardableResult
+     open func stream(withHostName hostName: String, port: Int) -> StreamRequest {
+         return stream(.stream(hostName: hostName, port: port))
+@@ -722,6 +723,7 @@ open class SessionManager {
+     /// - parameter netService: The net service used to identify the endpoint.
+     ///
+     /// - returns: The created `StreamRequest`.
++    @available(iOS 9.0, *)
+     @discardableResult
+     open func stream(with netService: NetService) -> StreamRequest {
+         return stream(.netService(netService))
+@@ -729,6 +731,7 @@ open class SessionManager {
+ 
+     // MARK: Private - Stream Implementation
+ 
++    @available(iOS 9.0, *)
+     private func stream(_ streamable: StreamRequest.Streamable) -> StreamRequest {
+         do {
+             let task = try streamable.task(session: session, adapter: adapter, queue: queue)
+@@ -744,6 +747,7 @@ open class SessionManager {
+         }
+     }
+ 
++    @available(iOS 9.0, *)
+     private func stream(failedWith error: Error) -> StreamRequest {
+         let stream = StreamRequest(session: session, requestTask: .stream(nil, nil), error: error)
+         if startRequestsImmediately { stream.resume() }
