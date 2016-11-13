@@ -3,10 +3,10 @@ Pod::Spec.new do |s|
   s.version = '4.0.1'
   s.license = 'MIT'
   s.summary = 'Elegant HTTP Networking in Swift'
-  s.homepage = 'https://github.com/51test2003/Alamofire-iOS8'
+  s.homepage = 'https://github.com/siriuscn/Alamofire-iOS8'
   s.social_media_url = 'http://twitter.com/AlamofireSF'
   s.authors = { 'Alamofire Software Foundation' => 'info@alamofire.org' }
-  s.source = { :git => 'https://github.com/51test2003/Alamofire-iOS8.git', :tag => s.version }
+  s.source = { :git => 'https://github.com/siriuscn/Alamofire-iOS8.git', :tag => s.version }
 
   s.ios.deployment_target = '8.0'
   s.osx.deployment_target = '10.11'
