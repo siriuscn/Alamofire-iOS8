@@ -36,7 +36,7 @@ platform :ios, '8.0'
 use_frameworks!
 
 target '<Your Target Name>' do
-pod 'Alamofire', :git => 'https://github.com/51test2003/Alamofire-iOS8.git'
+pod 'Alamofire', :git => 'https://github.com/siriuscn/Alamofire-iOS8.git'
 end
 ```
 
