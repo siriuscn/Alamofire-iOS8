@@ -1,4 +1,4 @@
-Please USE offical 4.1.0! It's now support iOS 8!
+Please USE offical 4.1.0+! It's now support iOS 8!
 
 # Alamofire-iOS8
 Add iOS 8 support for Alamofire.
